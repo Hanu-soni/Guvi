@@ -16,38 +16,41 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 
 
 // Get the POST data
-$data = json_decode(file_get_contents("register.php"), true);
+$data = json_decode(file_get_contents("php://input"), true);
+if ($data === null) {
+    // Handle the case where JSON data is not received or is invalid
+    http_response_code(400); // Bad Request
+    exit("Invalid JSON data");
+
+}
 
 //Extract the values
-$name = $data.name;
-$dob = $data.dob;
-$pan = $data.pan;
-$email = $data.email;
-$address = $data.address;
-$background = $data.background;
+$name = $data['name'];
+$id = $data['id'];
+$pass = $data['password'];
 
 // Check if the PAN number already exists
-$stmt = $conn->prepare("SELECT * FROM user WHERE pan = ?");
-$stmt->bind_param("s", $data);
+$stmt = $conn->prepare("SELECT * FROM register WHERE id =?");
+$stmt->bind_param("s",$data);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
-    // PAN number already exists, return an error response
-    $response = array(
-        "status" => "false",
-        "message" => "User already exists"
-    );
+    // id already exists, return an error response
+    http_response_code(500); // Bad Request
+    exit("User already exist");
+   
 } else {
-    // PAN number doesn't exist, insert the data into the database
-    $stmt = $conn->prepare("INSERT INTO user (name, dob, pan, email, address, background) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssssss", $name, $dob, $pan, $email, $address, $background);
+    // id doesn't exist, insert the data into the database
+    $stmt = $conn->prepare("INSERT INTO register (name,id,password) VALUES (?, ?, ?)");
+    $stmt->bind_param("sss", $name, $id, $pass);
 
     if ($stmt->execute()) {
         $response = array(
             "status" => "success",
             "message" => "User added successfully"
         );
+        
     } else {
         $response = array(
             "status" => "false",
